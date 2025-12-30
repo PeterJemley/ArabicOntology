@@ -29,6 +29,49 @@
 		48F264D72F02F8390072D358 /* ArabicOntologyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ArabicOntologyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		48F265052F02F9530072D358 /* Exceptions for "ArabicOntologyUITests" folder in "ArabicOntology" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				App/ArabicOntologyApp.swift,
+				App/ContentView.swift,
+				App/QueryService.swift,
+				Importer/CSVParser.swift,
+				Importer/ImportService.swift,
+				Models/ArabicNormalizer.swift,
+				Models/Concept.swift,
+				Models/Dialect.swift,
+				Models/Form.swift,
+				Models/GlossIndexEntry.swift,
+				Models/EnglishGlossNormalizer.swift,
+				Models/Lemma.swift,
+				Models/Root.swift,
+				Models/Sentence.swift,
+			);
+			target = 48F264BF2F02F8380072D358 /* ArabicOntology */;
+		};
+		48F265062F02F9530072D358 /* Exceptions for "ArabicOntologyUITests" folder in "ArabicOntologyUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				App/ArabicOntologyApp.swift,
+				App/ContentView.swift,
+				App/QueryService.swift,
+				Importer/CSVParser.swift,
+				Importer/ImportService.swift,
+				Models/ArabicNormalizer.swift,
+				Models/Concept.swift,
+				Models/Dialect.swift,
+				Models/Form.swift,
+				Models/GlossIndexEntry.swift,
+				Models/EnglishGlossNormalizer.swift,
+				Models/Lemma.swift,
+				Models/Root.swift,
+				Models/Sentence.swift,
+			);
+			target = 48F264D62F02F8390072D358 /* ArabicOntologyUITests */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		48F264C22F02F8380072D358 /* ArabicOntology */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -42,6 +85,10 @@
 		};
 		48F264DA2F02F8390072D358 /* ArabicOntologyUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				48F265052F02F9530072D358 /* Exceptions for "ArabicOntologyUITests" folder in "ArabicOntology" target */,
+				48F265062F02F9530072D358 /* Exceptions for "ArabicOntologyUITests" folder in "ArabicOntologyUITests" target */,
+			);
 			path = ArabicOntologyUITests;
 			sourceTree = "<group>";
 		};
