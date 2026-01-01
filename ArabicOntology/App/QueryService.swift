@@ -162,6 +162,57 @@ final class QueryService {
         
         return results
     }
+
+    /// Search lemmas by form token (e.g., CODA)
+    func lemmas(byFormToken query: String) throws -> [Lemma] {
+        guard !query.isEmpty else { return [] }
+
+        var results: [Lemma] = []
+        var seen: Set<String> = []
+
+        do {
+            let descriptor = FetchDescriptor<Form>(
+                predicate: #Predicate {
+                    $0.token.contains(query) || ($0.rawToken?.contains(query) ?? false)
+                }
+            )
+            let forms = try modelContext.fetch(descriptor)
+            for form in forms {
+                if let lemma = form.lemma, seen.insert(lemma.lemmaId).inserted {
+                    results.append(lemma)
+                }
+                if let lemma = form.msaLemma, seen.insert(lemma.lemmaId).inserted {
+                    results.append(lemma)
+                }
+            }
+        } catch {
+            // Fall back to normalized in-memory search if predicate is unsupported.
+        }
+
+        if !results.isEmpty {
+            return results
+        }
+
+        let normalizedQuery = ArabicNormalizer.normalize(query)
+        let forms = try modelContext.fetch(FetchDescriptor<Form>())
+        for form in forms {
+            let tokenMatches = ArabicNormalizer.normalize(form.token).contains(normalizedQuery)
+            let rawMatches = form.rawToken.map {
+                ArabicNormalizer.normalize($0).contains(normalizedQuery)
+            } ?? false
+
+            if tokenMatches || rawMatches {
+                if let lemma = form.lemma, seen.insert(lemma.lemmaId).inserted {
+                    results.append(lemma)
+                }
+                if let lemma = form.msaLemma, seen.insert(lemma.lemmaId).inserted {
+                    results.append(lemma)
+                }
+            }
+        }
+
+        return results
+    }
     
     /// Get lemmas by dialect
     func lemmas(inDialect dialect: Dialect) throws -> [Lemma] {

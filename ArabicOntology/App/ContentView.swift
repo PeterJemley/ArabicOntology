@@ -229,6 +229,8 @@ struct ContentView: View {
                 searchResults = try queryService.lemmas(matching: searchText)
             case .english:
                 searchResults = try queryService.lemmas(byGloss: searchText)
+            case .formToken:
+                searchResults = try queryService.lemmas(byFormToken: searchText)
             }
         } catch {
             print("Search error: \(error)")
@@ -251,6 +253,7 @@ struct ContentView: View {
 enum SearchMode: String, CaseIterable, Identifiable {
     case arabic
     case english
+    case formToken
     
     var id: String { rawValue }
     
@@ -258,6 +261,7 @@ enum SearchMode: String, CaseIterable, Identifiable {
         switch self {
         case .arabic: return "Arabic"
         case .english: return "English"
+        case .formToken: return "Form Token"
         }
     }
     
@@ -265,6 +269,7 @@ enum SearchMode: String, CaseIterable, Identifiable {
         switch self {
         case .arabic: return "Search Arabic lemmas..."
         case .english: return "Search English gloss..."
+        case .formToken: return "Search form token..."
         }
     }
 }
@@ -302,47 +307,76 @@ struct StatRow: View {
 
 struct LemmaDetailView: View {
     let lemma: Lemma
+    @State private var detailFilter = ""
     
     var body: some View {
         List {
+            Section {
+                TextField("Filter details...", text: $detailFilter)
+                    .textFieldStyle(.roundedBorder)
+            }
+            
             // Basic info
             Section("Lemma") {
-                LabeledContent("Headword", value: lemma.lemma)
-                LabeledContent("ID", value: lemma.lemmaId)
-                LabeledContent("Language", value: lemma.language)
-                LabeledContent("POS Category", value: lemma.posCategory)
-                LabeledContent("POS", value: lemma.pos)
+                if filteredLemmaRows.isEmpty && isFiltering {
+                    Text("No matching lemma details")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(filteredLemmaRows, id: \.0) { row in
+                        LabeledContent(row.0, value: row.1)
+                    }
+                }
             }
             
             // Root
-            if let root = lemma.rootRef {
+            if !rootRows.isEmpty {
                 Section("Root") {
-                    LabeledContent("Root", value: root.root)
-                    LabeledContent("Consonants", value: "\(root.consonantCount)")
+                    if filteredRootRows.isEmpty && isFiltering {
+                        Text("No matching root details")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(filteredRootRows, id: \.0) { row in
+                            LabeledContent(row.0, value: row.1)
+                        }
+                    }
                 }
             }
             
             // Morphological features
-            Section("Morphology") {
-                if let aug = lemma.augmentation { LabeledContent("Augmentation", value: aug) }
-                if let num = lemma.number { LabeledContent("Number", value: num) }
-                if let gen = lemma.gender { LabeledContent("Gender", value: gen) }
-                if let voice = lemma.voice { LabeledContent("Voice", value: voice) }
-                if let trans = lemma.transitivity { LabeledContent("Transitivity", value: trans) }
-                if lemma.uninflected { LabeledContent("Uninflected", value: "Yes") }
+            if !morphologyRows.isEmpty {
+                Section("Morphology") {
+                    if filteredMorphologyRows.isEmpty && isFiltering {
+                        Text("No matching morphology")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(filteredMorphologyRows, id: \.0) { row in
+                            LabeledContent(row.0, value: row.1)
+                        }
+                    }
+                }
             }
             
             // Concepts
             if !lemma.concepts.isEmpty {
-                Section("Concepts (\(lemma.concepts.count))") {
-                    ForEach(lemma.concepts) { concept in
-                        VStack(alignment: .leading) {
-                            Text(concept.arabicSynset)
-                                .font(.headline)
-                            if let gloss = concept.gloss {
-                                Text(gloss)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                let title = sectionTitle(
+                    base: "Concepts",
+                    filtered: filteredConcepts.count,
+                    total: lemma.concepts.count
+                )
+                Section(title) {
+                    if filteredConcepts.isEmpty {
+                        Text("No matching concepts")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(filteredConcepts) { concept in
+                            VStack(alignment: .leading) {
+                                Text(concept.arabicSynset)
+                                    .font(.headline)
+                                if let gloss = concept.gloss {
+                                    Text(gloss)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                         }
                     }
@@ -351,15 +385,25 @@ struct LemmaDetailView: View {
             
             // Correspondences
             if !lemma.correspondences.isEmpty {
-                Section("Correspondences (\(lemma.correspondences.count))") {
-                    ForEach(lemma.correspondences) { corresp in
-                        VStack(alignment: .leading) {
-                            Text(corresp.lemma)
-                                .font(.headline)
-                            if let dialect = corresp.dialect {
-                                Text(dialect.name)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                let title = sectionTitle(
+                    base: "Correspondences",
+                    filtered: filteredCorrespondences.count,
+                    total: lemma.correspondences.count
+                )
+                Section(title) {
+                    if filteredCorrespondences.isEmpty {
+                        Text("No matching correspondences")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(filteredCorrespondences) { corresp in
+                            VStack(alignment: .leading) {
+                                Text(corresp.lemma)
+                                    .font(.headline)
+                                if let dialect = corresp.dialect {
+                                    Text(dialect.name)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                         }
                     }
@@ -368,27 +412,160 @@ struct LemmaDetailView: View {
             
             // Forms
             if !lemma.forms.isEmpty {
-                Section("Forms (\(lemma.forms.count))") {
-                    ForEach(lemma.forms.prefix(20)) { form in
-                        VStack(alignment: .leading) {
-                            Text(form.token)
-                                .font(.headline)
-                            if let gloss = form.gloss {
-                                Text(gloss)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                let title = sectionTitle(
+                    base: "Forms",
+                    filtered: filteredForms.count,
+                    total: lemma.forms.count
+                )
+                Section(title) {
+                    if filteredForms.isEmpty {
+                        Text("No matching forms")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(filteredForms) { form in
+                            VStack(alignment: .leading) {
+                                Text(form.token)
+                                    .font(.headline)
+                                if let gloss = form.gloss {
+                                    Text(gloss)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                         }
-                    }
-                    if lemma.forms.count > 20 {
-                        Text("... and \(lemma.forms.count - 20) more")
-                            .foregroundStyle(.secondary)
+                        if !isFiltering && lemma.forms.count > 20 {
+                            Text("... and \(lemma.forms.count - 20) more")
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
             }
         }
         .textSelection(.enabled)
         .navigationTitle(lemma.lemma)
+    }
+    
+    private var isFiltering: Bool {
+        !detailFilter.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+    
+    private var lowercasedFilter: String {
+        detailFilter.lowercased()
+    }
+    
+    private var normalizedFilter: String {
+        ArabicNormalizer.normalize(detailFilter)
+    }
+    
+    private func matches(_ text: String) -> Bool {
+        guard isFiltering else { return true }
+        if text.lowercased().contains(lowercasedFilter) {
+            return true
+        }
+        return ArabicNormalizer.normalize(text).contains(normalizedFilter)
+    }
+
+    private func matchesOptional(_ text: String?) -> Bool {
+        guard let text else { return false }
+        return matches(text)
+    }
+    
+    private func sectionTitle(base: String, filtered: Int, total: Int) -> String {
+        if isFiltering {
+            return "\(base) (\(filtered) of \(total))"
+        }
+        return "\(base) (\(total))"
+    }
+    
+    private var lemmaRows: [(String, String)] {
+        var rows: [(String, String)] = [
+            ("Headword", lemma.lemma),
+            ("ID", lemma.lemmaId),
+            ("Language", lemma.language),
+            ("POS Category", lemma.posCategory),
+            ("POS", lemma.pos)
+        ]
+        if let attested = attestedDialectsText {
+            rows.append(("Attested Dialect(s)", attested))
+        }
+        return rows
+    }
+    
+    private var filteredLemmaRows: [(String, String)] {
+        filterRows(lemmaRows)
+    }
+    
+    private var rootRows: [(String, String)] {
+        guard let root = lemma.rootRef else { return [] }
+        return [
+            ("Root", root.root),
+            ("Consonants", "\(root.consonantCount)")
+        ]
+    }
+    
+    private var filteredRootRows: [(String, String)] {
+        filterRows(rootRows)
+    }
+    
+    private var morphologyRows: [(String, String)] {
+        var rows: [(String, String)] = []
+        if let aug = lemma.augmentation { rows.append(("Augmentation", aug)) }
+        if let num = lemma.number { rows.append(("Number", num)) }
+        if let gen = lemma.gender { rows.append(("Gender", gen)) }
+        if let voice = lemma.voice { rows.append(("Voice", voice)) }
+        if let trans = lemma.transitivity { rows.append(("Transitivity", trans)) }
+        if lemma.uninflected { rows.append(("Uninflected", "Yes")) }
+        return rows
+    }
+    
+    private var filteredMorphologyRows: [(String, String)] {
+        filterRows(morphologyRows)
+    }
+    
+    private func filterRows(_ rows: [(String, String)]) -> [(String, String)] {
+        guard isFiltering else { return rows }
+        return rows.filter { matches($0.0) || matches($0.1) }
+    }
+    
+    private var filteredConcepts: [Concept] {
+        guard isFiltering else { return lemma.concepts }
+        return lemma.concepts.filter { concept in
+            matches(concept.arabicSynset)
+                || matchesOptional(concept.englishSynset)
+                || matchesOptional(concept.gloss)
+                || matchesOptional(concept.example)
+        }
+    }
+    
+    private var filteredCorrespondences: [Lemma] {
+        guard isFiltering else { return lemma.correspondences }
+        return lemma.correspondences.filter { corresp in
+            matches(corresp.lemma)
+                || matchesOptional(corresp.dialect?.name)
+                || matchesOptional(corresp.dialect?.code)
+        }
+    }
+    
+    private var filteredForms: [Form] {
+        if !isFiltering {
+            return Array(lemma.forms.prefix(20))
+        }
+        return lemma.forms.filter { form in
+            matches(form.token)
+                || matchesOptional(form.rawToken)
+                || matchesOptional(form.gloss)
+                || matchesOptional(form.pos)
+                || matchesOptional(form.prefixes)
+                || matchesOptional(form.stem)
+                || matchesOptional(form.suffixes)
+                || matchesOptional(form.subdialect)
+        }
+    }
+    
+    private var attestedDialectsText: String? {
+        let dialectNames = Set(lemma.forms.compactMap { $0.dialect?.name })
+        guard !dialectNames.isEmpty else { return nil }
+        return dialectNames.sorted().joined(separator: ", ")
     }
 }
 
