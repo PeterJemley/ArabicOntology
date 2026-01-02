@@ -213,6 +213,57 @@ final class QueryService {
 
         return results
     }
+
+    /// Search lemmas by root (accepts inputs with or without spaces)
+    func lemmas(byRoot query: String) throws -> [Lemma] {
+        let variants = rootVariants(from: query)
+        guard !variants.isEmpty else { return [] }
+
+        var results: [Lemma] = []
+        var seenLemmaIds: Set<String> = []
+        var seenRootValues: Set<String> = []
+
+        for variant in variants {
+            let descriptor = FetchDescriptor<Root>(
+                predicate: #Predicate { $0.root == variant }
+            )
+            for root in try modelContext.fetch(descriptor) {
+                if !seenRootValues.insert(root.root).inserted { continue }
+                for lemma in root.lemmas {
+                    if seenLemmaIds.insert(lemma.lemmaId).inserted {
+                        results.append(lemma)
+                    }
+                }
+            }
+        }
+
+        return results
+    }
+
+    private func rootVariants(from query: String) -> [String] {
+        let normalized = ArabicNormalizer.normalize(query)
+        let trimmed = normalized.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+
+        let collapsed = trimmed
+            .split { $0 == " " || $0 == "\t" || $0 == "\n" }
+            .joined(separator: " ")
+
+        let lettersOnly = trimmed.unicodeScalars
+            .filter { CharacterSet.letters.contains($0) }
+            .map(String.init)
+            .joined()
+
+        var variants = Set<String>()
+        if !collapsed.isEmpty {
+            variants.insert(collapsed)
+        }
+        if !lettersOnly.isEmpty {
+            let spaced = lettersOnly.map(String.init).joined(separator: " ")
+            variants.insert(spaced)
+        }
+        return Array(variants)
+    }
     
     /// Get lemmas by dialect
     func lemmas(inDialect dialect: Dialect) throws -> [Lemma] {
