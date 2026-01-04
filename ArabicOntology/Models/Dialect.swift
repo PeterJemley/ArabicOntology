@@ -1,21 +1,30 @@
 import Foundation
 import SwiftData
 
+/// Dialect or register bucket used to group lemmas, forms, and sentences.
+/// Dialects are seeded from a predefined list and referenced by code.
 @Model
 final class Dialect {
     // MARK: - Attributes
-    @Attribute(.unique) var code: String      // e.g., "lebanese", "msa"
-    var name: String                          // e.g., "Lebanese", "Modern Standard Arabic"
-    var region: String                        // e.g., "Levant", "Standard"
-    var corpusSource: String                  // e.g., "Baladi", "Qabas"
+    /// Stable dialect code (for example, "lebanese", "msa").
+    @Attribute(.unique) var code: String
+    /// Display name used in the UI.
+    var name: String
+    /// Regional grouping label (for example, "Levant", "Standard").
+    var region: String
+    /// Source corpus that defines or supplies this dialect.
+    var corpusSource: String
     
     // MARK: - Relationships
+    /// Lemmas assigned to this dialect (Qabas register values map to MSA).
     @Relationship(deleteRule: .nullify, inverse: \Lemma.dialect)
     var lemmas: [Lemma] = []
     
+    /// Corpus forms attested in this dialect.
     @Relationship(deleteRule: .nullify, inverse: \Form.dialect)
     var forms: [Form] = []
     
+    /// Sentences originating from this dialect's corpus.
     @Relationship(deleteRule: .nullify, inverse: \Sentence.dialect)
     var sentences: [Sentence] = []
     

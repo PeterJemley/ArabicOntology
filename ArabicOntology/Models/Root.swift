@@ -1,12 +1,15 @@
 import Foundation
 import SwiftData
 
+/// Consonantal root from Qabas (space-delimited consonants).
 @Model
 final class Root {
     // MARK: - Attributes
-    @Attribute(.unique) var root: String  // e.g., "ك ت ب"
+    /// Root string with consonants separated by spaces.
+    @Attribute(.unique) var root: String
     
     // MARK: - Relationships
+    /// Lemmas that share this root.
     @Relationship(deleteRule: .nullify, inverse: \Lemma.rootRef)
     var lemmas: [Lemma] = []
     
@@ -17,12 +20,12 @@ final class Root {
     
     // MARK: - Computed Properties
     
-    /// Root consonants as array
+    /// Root consonants split on spaces.
     var consonants: [String] {
         root.split(separator: " ").map(String.init)
     }
     
-    /// Number of consonants (typically 3 or 4)
+    /// Number of consonants (typically 3 or 4).
     var consonantCount: Int {
         consonants.count
     }

@@ -1,41 +1,59 @@
 import Foundation
 import SwiftData
 
+/// Canonical lemma entry imported from Qabas.
+/// Lemmas are the primary headwords used for search and linkage.
 @Model
 final class Lemma {
     // MARK: - Attributes
+    /// Stable lemma identifier from Qabas.
     @Attribute(.unique) var lemmaId: String
-    var lemma: String                         // The headword, e.g., "كَتَبَ"
+    /// Headword text for the lemma.
+    var lemma: String
     
-    /// Register classification from Qabas: "فصحى حديثة" (MSA), "عامية" (colloquial), "أجنبية" (foreign).
-    /// Note: This is register, not dialect. All values map to MSA for dialect queries.
+    /// Register classification from Qabas.
+    /// Note: This is register, not dialect. Values map to MSA for dialect queries.
     /// Actual dialect association for forms comes from corpus provenance.
     var language: String
     
-    var posCategory: String                   // "اسم", "فعل", "كلمة وظيفية"
-    var pos: String                           // Detailed POS tag
+    /// High-level POS category from Qabas.
+    var posCategory: String
+    /// Detailed POS tag from Qabas.
+    var pos: String
     
     // Morphological features
-    var augmentation: String?                 // "مجرد", "مزيد"
-    var number: String?                       // "مفرد", "مثنى", "جمع"
-    var person: String?                       // "متكلم", "مخاطب", "غائب"
-    var gender: String?                       // "مذكر", "مؤنث"
-    var voice: String?                        // "معلوم", "مجهول"
-    var transitivity: String?                 // "متعد", "لازم"
-    var uninflected: Bool                     // Does not inflect
+    /// Augmentation class from Qabas.
+    var augmentation: String?
+    /// Number value from Qabas.
+    var number: String?
+    /// Person value from Qabas.
+    var person: String?
+    /// Gender value from Qabas.
+    var gender: String?
+    /// Voice value from Qabas.
+    var voice: String?
+    /// Transitivity value from Qabas.
+    var transitivity: String?
+    /// True when the lemma does not inflect.
+    var uninflected: Bool
     
     // MARK: - Relationships
+    /// Root assigned from Qabas, when provided.
     var rootRef: Root?
+    /// Dialect bucket (Qabas register values map to MSA).
     var dialect: Dialect?
+    /// Concepts linked via normalized synset matching.
     var concepts: [Concept] = []
     
     @Relationship(deleteRule: .cascade, inverse: \Form.lemma)
+    /// Corpus forms that realize this lemma as a dialectal headword.
     var forms: [Form] = []
     
     @Relationship(deleteRule: .cascade, inverse: \GlossIndexEntry.lemma)
+    /// English gloss index entries pointing to this lemma.
     var glossEntries: [GlossIndexEntry] = []
     
-    /// Symmetric correspondence with other lemmas across dialects
+    /// Symmetric correspondence with other lemmas across dialects.
     var correspondences: [Lemma] = []
     
     // MARK: - Initialization
@@ -69,22 +87,22 @@ final class Lemma {
     
     // MARK: - Computed Properties
     
-    /// Whether this is an MSA lemma
+    /// Whether this lemma is tagged as MSA register.
     var isMSA: Bool {
         language == "فصحى حديثة"
     }
     
-    /// Whether this is a dialect lemma
+    /// Whether this lemma is tagged as colloquial register.
     var isDialect: Bool {
         language == "عامية"
     }
     
-    /// Whether this is a foreign loanword
+    /// Whether this lemma is tagged as a foreign loanword.
     var isForeign: Bool {
         language == "أجنبية"
     }
     
-    /// POS category in English
+    /// POS category in English for UI display.
     var posCategoryEnglish: String {
         switch posCategory {
         case "اسم": return "Noun"

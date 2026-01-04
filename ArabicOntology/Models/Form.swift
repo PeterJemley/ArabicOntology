@@ -1,39 +1,54 @@
 import Foundation
 import SwiftData
 
+/// A single attested word form from a corpus dataset row.
+/// Forms are the link between dialectal surface tokens and lemmas.
 @Model
 final class Form {
     // MARK: - Attributes
-    @Attribute(.unique) var formKey: String   // Stable key for de-dup across imports
-    var token: String                         // Normalized form (Token or CODA)
-    var rawToken: String?                     // Original form before normalization
-    var gloss: String?                        // English rendering
-    var pos: String?                          // POS tag
-    var prefixes: String?                     // Prefix analysis
-    var stem: String?                         // Stem after affix removal
-    var suffixes: String?                     // Suffix analysis
-    var wordPosition: Int                     // Position in sentence
+    /// Stable deduplication key (dialectCode:sentenceId:wordPosition).
+    @Attribute(.unique) var formKey: String
+    /// Normalized form token (Token column, or CODA for Syrian/Nabra).
+    var token: String
+    /// Original token before normalization, when provided.
+    var rawToken: String?
+    /// English gloss text, when provided.
+    var gloss: String?
+    /// Part-of-speech tag from the corpus.
+    var pos: String?
+    /// Prefix analysis string from the corpus.
+    var prefixes: String?
+    /// Stem after affix removal.
+    var stem: String?
+    /// Suffix analysis string from the corpus.
+    var suffixes: String?
+    /// Position within the sentence (as reported by the corpus).
+    var wordPosition: Int
     
     // Grammatical features
-    var personFeature: String?                // "1", "2", "3"
-    var genderFeature: String?                // "m", "f"
-    var numberFeature: String?                // "s", "d", "p"
+    /// Person feature code (for example, "1", "2", "3").
+    var personFeature: String?
+    /// Gender feature code (for example, "m", "f").
+    var genderFeature: String?
+    /// Number feature code (for example, "s", "d", "p").
+    var numberFeature: String?
     
     // Nabra-specific
-    var subdialect: String?                   // Syrian subdialect (Nabra only)
+    /// Syrian subdialect label (Nabra only).
+    var subdialect: String?
     
     // MARK: - Relationships
     
-    /// The dialect lemma this form realizes
+    /// Dialect lemma this form realizes (DA lemma).
     var lemma: Lemma?
     
-    /// The MSA lemma this form corresponds to
+    /// MSA lemma this form corresponds to, when linked.
     var msaLemma: Lemma?
     
-    /// The dialect this form is attested in
+    /// Dialect this form is attested in.
     var dialect: Dialect?
     
-    /// The sentence containing this form
+    /// Sentence containing this form.
     var sentence: Sentence?
     
     // MARK: - Initialization
@@ -69,14 +84,14 @@ final class Form {
     
     // MARK: - Computed Properties
     
-    /// Full grammatical feature string
+    /// Compact person/gender/number feature string.
     var features: String {
         [personFeature, genderFeature, numberFeature]
             .compactMap { $0 }
             .joined(separator: ".")
     }
     
-    /// Gender in English
+    /// Gender label in English, when recognized.
     var genderEnglish: String? {
         switch genderFeature {
         case "m": return "masculine"
@@ -85,7 +100,7 @@ final class Form {
         }
     }
     
-    /// Number in English
+    /// Number label in English, when recognized.
     var numberEnglish: String? {
         switch numberFeature {
         case "s": return "singular"
