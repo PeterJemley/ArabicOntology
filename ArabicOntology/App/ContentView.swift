@@ -798,165 +798,172 @@ struct LemmaDetailView: View {
     let lemma: Lemma
     @Binding var detailFilter: String
     @State private var debouncedFilter = ""
+    @State private var showRadialView = false
     
     var body: some View {
-        List {
-            Section {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(lemma.lemma)
-                        .font(AppFontScale.font(.title2, scale: AppFontScale.headword, weight: .semibold))
-                    Text("ID: \(lemma.lemmaId) | Dialect: \(lemma.dialect?.name ?? "Unknown")")
-                        .font(AppFontScale.font(.caption))
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Section {
-                TextField("Filter details...", text: $detailFilter)
-                    .textFieldStyle(.roundedBorder)
-                    .padding(.trailing, 24)
-                    .overlay(alignment: .trailing) {
-                        if !detailFilter.isEmpty {
-                            Button {
-                                detailFilter = ""
-                                debouncedFilter = ""
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(.secondary)
-                            }
-                            .buttonStyle(.plain)
-                            .padding(.trailing, 8)
-                            .accessibilityLabel("Clear filter")
-                        }
-                    }
-                    .task(id: detailFilter) {
-                        let currentFilter = detailFilter
-                        try? await Task.sleep(nanoseconds: 250_000_000)
-                        if Task.isCancelled { return }
-                        debouncedFilter = currentFilter
-                    }
-            }
-            
-            // Basic info
-            Section("Lemma") {
-                if filteredLemmaRows.isEmpty && isFiltering {
-                    Text("No matching lemma details")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(filteredLemmaRows, id: \.0) { row in
-                        LabeledContent(row.0, value: row.1)
-                    }
-                }
-            }
-            
-            // Root
-            if !rootRows.isEmpty {
-                Section("Root") {
-                    if filteredRootRows.isEmpty && isFiltering {
-                        Text("No matching root details")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(filteredRootRows, id: \.0) { row in
-                            LabeledContent(row.0, value: row.1)
-                        }
-                    }
-                }
-            }
-            
-            // Morphological features
-            if !morphologyRows.isEmpty {
-                Section("Morphology") {
-                    if filteredMorphologyRows.isEmpty && isFiltering {
-                        Text("No matching morphology")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(filteredMorphologyRows, id: \.0) { row in
-                            LabeledContent(row.0, value: row.1)
-                        }
-                    }
-                }
-            }
-            
-            // Concepts
-            if !lemma.concepts.isEmpty {
-                let title = sectionTitle(
-                    base: "Concepts",
-                    filtered: filteredConcepts.count,
-                    total: lemma.concepts.count
-                )
-                Section(title) {
-                    if filteredConcepts.isEmpty {
-                        Text("No matching concepts")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(filteredConcepts) { concept in
-                            VStack(alignment: .leading) {
-                                Text(concept.arabicSynset)
-                                    .font(AppFontScale.font(.headline))
-                                if let gloss = concept.gloss {
-                                    Text(gloss)
-                                        .font(AppFontScale.font(.caption))
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // Correspondences
-            if !lemma.correspondences.isEmpty {
-                let title = sectionTitle(
-                    base: "Correspondences",
-                    filtered: filteredCorrespondences.count,
-                    total: lemma.correspondences.count
-                )
-                Section(title) {
-                    if filteredCorrespondences.isEmpty {
-                        Text("No matching correspondences")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(filteredCorrespondences) { corresp in
-                            VStack(alignment: .leading) {
-                                Text(corresp.lemma)
-                                    .font(AppFontScale.font(.headline))
-                                if let dialect = corresp.dialect {
-                                    Text(dialect.name)
-                                        .font(AppFontScale.font(.caption))
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // Forms
-            if !lemma.forms.isEmpty {
-                let title = sectionTitle(
-                    base: "Forms",
-                    filtered: filteredForms.count,
-                    total: lemma.forms.count
-                )
-                Section(title) {
-                    if filteredForms.isEmpty {
-                        Text("No matching forms")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(filteredForms) { form in
-                            VStack(alignment: .leading) {
-                                Text(form.token)
-                                    .font(AppFontScale.font(.headline))
-                                if let gloss = form.gloss {
-                                    Text(gloss)
-                                        .font(AppFontScale.font(.caption))
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                        if !isFiltering && lemma.forms.count > 20 {
-                            Text("... and \(lemma.forms.count - 20) more")
+        VStack(spacing: 0) {
+            if showRadialView {
+                RadialView(rootLemma: lemma)
+            } else {
+                List {
+                    Section {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(lemma.lemma)
+                                .font(AppFontScale.font(.title2, scale: AppFontScale.headword, weight: .semibold))
+                            Text("ID: \(lemma.lemmaId) | Dialect: \(lemma.dialect?.name ?? "Unknown")")
+                                .font(AppFontScale.font(.caption))
                                 .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    Section {
+                        TextField("Filter details...", text: $detailFilter)
+                            .textFieldStyle(.roundedBorder)
+                            .padding(.trailing, 24)
+                            .overlay(alignment: .trailing) {
+                                if !detailFilter.isEmpty {
+                                    Button {
+                                        detailFilter = ""
+                                        debouncedFilter = ""
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .padding(.trailing, 8)
+                                    .accessibilityLabel("Clear filter")
+                                }
+                            }
+                            .task(id: detailFilter) {
+                                let currentFilter = detailFilter
+                                try? await Task.sleep(nanoseconds: 250_000_000)
+                                if Task.isCancelled { return }
+                                debouncedFilter = currentFilter
+                            }
+                    }
+                    
+                    // Basic info
+                    Section("Lemma") {
+                        if filteredLemmaRows.isEmpty && isFiltering {
+                            Text("No matching lemma details")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ForEach(filteredLemmaRows, id: \.0) { row in
+                                LabeledContent(row.0, value: row.1)
+                            }
+                        }
+                    }
+                    
+                    // Root
+                    if !rootRows.isEmpty {
+                        Section("Root") {
+                            if filteredRootRows.isEmpty && isFiltering {
+                                Text("No matching root details")
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                ForEach(filteredRootRows, id: \.0) { row in
+                                    LabeledContent(row.0, value: row.1)
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Morphological features
+                    if !morphologyRows.isEmpty {
+                        Section("Morphology") {
+                            if filteredMorphologyRows.isEmpty && isFiltering {
+                                Text("No matching morphology")
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                ForEach(filteredMorphologyRows, id: \.0) { row in
+                                    LabeledContent(row.0, value: row.1)
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Concepts
+                    if !lemma.concepts.isEmpty {
+                        let title = sectionTitle(
+                            base: "Concepts",
+                            filtered: filteredConcepts.count,
+                            total: lemma.concepts.count
+                        )
+                        Section(title) {
+                            if filteredConcepts.isEmpty {
+                                Text("No matching concepts")
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                ForEach(filteredConcepts) { concept in
+                                    VStack(alignment: .leading) {
+                                        Text(concept.arabicSynset)
+                                            .font(AppFontScale.font(.headline))
+                                        if let gloss = concept.gloss {
+                                            Text(gloss)
+                                                .font(AppFontScale.font(.caption))
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Correspondences
+                    if !lemma.correspondences.isEmpty {
+                        let title = sectionTitle(
+                            base: "Correspondences",
+                            filtered: filteredCorrespondences.count,
+                            total: lemma.correspondences.count
+                        )
+                        Section(title) {
+                            if filteredCorrespondences.isEmpty {
+                                Text("No matching correspondences")
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                ForEach(filteredCorrespondences) { corresp in
+                                    VStack(alignment: .leading) {
+                                        Text(corresp.lemma)
+                                            .font(AppFontScale.font(.headline))
+                                        if let dialect = corresp.dialect {
+                                            Text(dialect.name)
+                                                .font(AppFontScale.font(.caption))
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Forms
+                    if !lemma.forms.isEmpty {
+                        let title = sectionTitle(
+                            base: "Forms",
+                            filtered: filteredForms.count,
+                            total: lemma.forms.count
+                        )
+                        Section(title) {
+                            if filteredForms.isEmpty {
+                                Text("No matching forms")
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                ForEach(filteredForms) { form in
+                                    VStack(alignment: .leading) {
+                                        Text(form.token)
+                                            .font(AppFontScale.font(.headline))
+                                        if let gloss = form.gloss {
+                                            Text(gloss)
+                                                .font(AppFontScale.font(.caption))
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+                                if !isFiltering && lemma.forms.count > 20 {
+                                    Text("... and \(lemma.forms.count - 20) more")
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
                         }
                     }
                 }
@@ -964,7 +971,18 @@ struct LemmaDetailView: View {
         }
         .textSelection(.enabled)
         .navigationTitle(lemma.lemma)
+        .toolbar {
+            ToolbarItem {
+                Button {
+                    showRadialView.toggle()
+                } label: {
+                    Label(showRadialView ? "List View" : "Radial View", systemImage: showRadialView ? "list.bullet" : "circle.grid.2x2")
+                }
+                .help(showRadialView ? "Switch to List View" : "Switch to Radial View")
+            }
+        }
     }
+
     
     private var isFiltering: Bool {
         !debouncedFilter.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
